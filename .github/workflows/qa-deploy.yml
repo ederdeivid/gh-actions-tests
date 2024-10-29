@@ -1,6 +1,7 @@
+name: QA Deploy
+
 on:
   pull_request:
-    types: [opened]
     branches:
       - develop
 
