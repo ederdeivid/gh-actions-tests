@@ -1,0 +1,20 @@
+on:
+  pull_request:
+    types: [opened]
+    branches:
+      - develop
+
+jobs:
+  reset-develop-before-new-PR:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Reset develop to master before new PR
+        run: |
+          git fetch origin master
+          git checkout develop
+          git reset --hard origin/master
+          git push origin develop --force
