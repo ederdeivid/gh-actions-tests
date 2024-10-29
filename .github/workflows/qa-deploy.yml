@@ -15,6 +15,7 @@ jobs:
 
       - name: Reset develop to master before new PR
         run: |
+          git fetch
           git fetch origin master
           git checkout develop
           git reset --hard origin/master
