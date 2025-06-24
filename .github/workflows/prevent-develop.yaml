@@ -15,7 +15,7 @@ jobs:
       - name: Fetch all branches
         run: |
           git fetch origin develop
-          git fetch origin main
+          git fetch origin master
 
       - name: Check if develop is ancestor of current branch
         run: |
