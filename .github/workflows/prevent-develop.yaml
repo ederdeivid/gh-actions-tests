@@ -1,10 +1,10 @@
-name: Prevent develop merge
+name: Prevent Merge from Develop
 
 on:
   pull_request:
 
 jobs:
-  check-develop-ancestry:
+  check-merge-from-develop:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -12,18 +12,33 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch all branches
+      - name: Fetch develop branch
         run: |
           git fetch origin develop
-          git fetch origin master
 
-      - name: Check if develop is ancestor of current branch
+      - name: Check for merge commits from develop
         run: |
-          echo "🔎 Verificando se contém develop na branch atual (HEAD)..."
+          echo "🔎 Procurando por commits de merge onde 'develop' é um dos pais..."
 
-          if git merge-base --is-ancestor origin/develop HEAD; then
-            echo "❌ Erro: Esta branch contém develop. Provavelmente houve um merge ou rebase de develop."
-            exit 1
-          else
-            echo "✅ Ok: Nenhum merge direto de develop encontrado nesta branch."
-          fi
+          # Pega o SHA atual de develop
+          DEVELOP_SHA=$(git rev-parse origin/develop)
+          echo "👉 SHA atual de develop: $DEVELOP_SHA"
+
+          # Varre todos os commits de merge na branch atual
+          MERGE_COMMITS=$(git log origin/master..HEAD --merges --pretty=format:"%H")
+
+          echo "👉 Commits de merge encontrados:"
+          echo "$MERGE_COMMITS"
+
+          for commit in $MERGE_COMMITS; do
+            # Pega os dois pais do merge commit
+            PARENTS=$(git log -1 --pretty=format:"%P" $commit)
+
+            # Se um dos pais for develop, falha
+            if echo "$PARENTS" | grep -q "$DEVELOP_SHA"; then
+              echo "❌ ERRO: Encontrado merge de develop no commit $commit"
+              exit 1
+            fi
+          done
+
+          echo "✅ Nenhum merge de develop encontrado. Safe to proceed."
