@@ -1,0 +1,29 @@
+name: Prevent develop merge
+
+on:
+  pull_request:
+
+jobs:
+  check-develop-ancestry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all branches
+        run: |
+          git fetch origin develop
+          git fetch origin main
+
+      - name: Check if develop is ancestor of current branch
+        run: |
+          echo "🔎 Verificando se contém develop na branch atual (HEAD)..."
+
+          if git merge-base --is-ancestor origin/develop HEAD; then
+            echo "❌ Erro: Esta branch contém develop. Provavelmente houve um merge ou rebase de develop."
+            exit 1
+          else
+            echo "✅ Ok: Nenhum merge direto de develop encontrado nesta branch."
+          fi
