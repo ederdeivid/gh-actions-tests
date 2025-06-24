@@ -1,29 +1,51 @@
-name: Prevent develop merge
+name: Prevent Merge from Develop
 
 on:
   pull_request:
 
 jobs:
-  check-develop-ancestry:
+  check-merge-from-develop:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Necessário para ter histórico completo
 
       - name: Fetch all branches
         run: |
           git fetch origin develop
           git fetch origin master
 
-      - name: Check if develop is ancestor of current branch
+      - name: Block merge commits from develop
         run: |
-          echo "🔎 Verificando se contém develop na branch atual (HEAD)..."
+          echo "🔎 Buscando merges de 'develop' na branch..."
 
-          if git merge-base --is-ancestor origin/develop HEAD; then
-            echo "❌ Erro: Esta branch contém develop. Provavelmente houve um merge ou rebase de develop."
-            exit 1
-          else
-            echo "✅ Ok: Nenhum merge direto de develop encontrado nesta branch."
-          fi
+          # Captura o SHA atual de develop
+          DEVELOP_SHA=$(git rev-parse origin/develop)
+
+          # Pega todos os commits de merge da branch atual (desde master até HEAD)
+          MERGE_COMMITS=$(git log origin/master..HEAD --merges --pretty=format:"%H")
+
+          echo "👉 Merge commits encontrados:"
+          echo "$MERGE_COMMITS"
+
+          for commit in $MERGE_COMMITS; do
+            # Verifica se a mensagem de merge menciona 'develop'
+            MERGE_MESSAGE=$(git log -1 --pretty=format:"%s" $commit)
+            echo "📌 Analisando commit $commit: '$MERGE_MESSAGE'"
+
+            if echo "$MERGE_MESSAGE" | grep -i "develop"; then
+              echo "❌ Erro: Encontrado merge de develop via mensagem no commit $commit"
+              exit 1
+            fi
+
+            # Verifica se o SHA de develop é um dos pais do merge
+            PARENTS=$(git log -1 --pretty=format:"%P" $commit)
+            if echo "$PARENTS" | grep -q "$DEVELOP_SHA"; then
+              echo "❌ Erro: Encontrado merge de develop via SHA no commit $commit"
+              exit 1
+            fi
+          done
+
+          echo "✅ Nenhum merge de develop encontrado. Safe to proceed."
