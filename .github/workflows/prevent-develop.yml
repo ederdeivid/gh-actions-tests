@@ -2,7 +2,6 @@ name: Prevent Merge from Develop
 
 on:
   pull_request:
-  push:
 
 jobs:
   check-merge-from-develop:
